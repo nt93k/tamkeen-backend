@@ -190,7 +190,6 @@ async def register(payload: RegisterIn):
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="البريد مستخدم مسبقاً")
     user_id = f"u_{uuid.uuid4().hex[:12]}"
-    requires_verify = payload.role in ("student", "employer")
     doc = {
         "user_id": user_id,
         "email": email,
@@ -207,21 +206,10 @@ async def register(payload: RegisterIn):
         "bio": "",
         "passed_competency": False,
         "auth_provider": "email",
-        "email_verified": not requires_verify,
+        "email_verified": True,
         "created_at": datetime.now(timezone.utc),
     }
     await db.users.insert_one(doc)
-    if requires_verify:
-        code = f"{random.randint(0, 999999):06d}"
-        await db.otps.update_one(
-            {"email": email, "purpose": "verify"},
-            {"$set": {"email": email, "purpose": "verify", "code": code,
-                      "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10),
-                      "attempts": 0, "created_at": datetime.now(timezone.utc)}},
-            upsert=True,
-        )
-        await send_otp_email(email, code, "verify")
-        return {"requires_verification": True, "email": email, "message": "تم إرسال رمز التحقق إلى بريدك"}
     token = create_token(user_id, payload.role)
     doc.pop("password_hash", None); doc.pop("_id", None)
     return {"token": token, "user": doc}
@@ -316,8 +304,6 @@ async def login(payload: LoginIn):
     user = await db.users.find_one({"email": email})
     if not user or not user.get("password_hash") or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="بريد أو كلمة سر غير صحيحة")
-    if user.get("role") in ("student","employer") and not user.get("email_verified"):
-        raise HTTPException(status_code=403, detail="EMAIL_NOT_VERIFIED")
     token = create_token(user["user_id"], user["role"])
     user.pop("password_hash", None); user.pop("_id", None)
     return {"token": token, "user": user}

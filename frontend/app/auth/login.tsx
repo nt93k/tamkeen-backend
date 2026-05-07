@@ -15,14 +15,7 @@ export default function Login() {
   const submit = async () => {
     setBusy(true);
     try { await login(email.trim(), password); router.replace('/'); }
-    catch (e: any) {
-      if (e.message === 'EMAIL_NOT_VERIFIED') {
-        try { await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/resend-code`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email: email.trim(), purpose:'verify'})}); } catch {}
-        router.replace({ pathname: '/auth/verify', params: { email: email.trim() } });
-      } else {
-        Alert.alert('خطأ', e.message);
-      }
-    }
+    catch (e: any) { Alert.alert('خطأ', e.message); }
     finally { setBusy(false); }
   };
 
