@@ -1,0 +1,190 @@
+{
+  "theme_and_archetype": {
+    "theme": "LIGHT",
+    "archetype_number": 4,
+    "archetype_name": "Swiss & High-Contrast (Modern Gen-Z Variant)",
+    "description": "A high-clarity, professional aesthetic engineered for trust and data density, but injected with vibrant Gen-Z energy. Essential for a platform bridging academia and the job market. It rejects the 'boring corporate job board' look in favor of sharp, functional brutalism mixed with highly approachable rounded UI elements."
+  },
+  "color_palette": {
+    "background": {
+      "main": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "surface_elevated": "#F3F4F6",
+      "inverse": "#0A0A0A"
+    },
+    "text": {
+      "primary": "#0A0A0A",
+      "secondary": "#52525B",
+      "tertiary": "#A1A1AA",
+      "inverse": "#FFFFFF"
+    },
+    "brand": {
+      "primary": "#0033CC",
+      "primary_light": "#E6ECFF",
+      "accent": "#FF5A36",
+      "accent_light": "#FFF0ED"
+    },
+    "status": {
+      "success": "#10B981",
+      "success_bg": "#D1FAE5",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Cairo",
+      "body": "Tajawal",
+      "fallback": "System"
+    },
+    "scales": {
+      "h1": {
+        "size": 32,
+        "weight": "800",
+        "letter_spacing": -0.5,
+        "line_height": 40
+      },
+      "h2": {
+        "size": 24,
+        "weight": "700",
+        "letter_spacing": -0.3,
+        "line_height": 32
+      },
+      "h3": {
+        "size": 20,
+        "weight": "700",
+        "letter_spacing": 0,
+        "line_height": 28
+      },
+      "body_large": {
+        "size": 16,
+        "weight": "500",
+        "letter_spacing": 0,
+        "line_height": 24
+      },
+      "body": {
+        "size": 14,
+        "weight": "400",
+        "letter_spacing": 0,
+        "line_height": 20
+      },
+      "caption": {
+        "size": 12,
+        "weight": "500",
+        "letter_spacing": 0.2,
+        "line_height": 16
+      }
+    }
+  },
+  "spacing_and_layout": {
+    "generous_spacing_rule": true,
+    "base_padding": 24,
+    "screen_padding": 24,
+    "item_gap": 16,
+    "section_gap": 32,
+    "border_radius": {
+      "sm": 8,
+      "md": 12,
+      "lg": 20,
+      "full": 9999
+    }
+  },
+  "rtl_guidelines": {
+    "critical_note": "Tamkeen is Arabic-first. React Native 'flexDirection: row' automatically mirrors in RTL mode if I18nManager is configured. Do NOT hardcode 'left' or 'right' margins/paddings if possible; use 'marginStart' and 'marginEnd'.",
+    "reading_pattern": "F-shaped from top-right. Primary content aligns right.",
+    "icons": "Directional icons (arrows, chevrons) MUST be mirrored. Back button must point right.",
+    "text_alignment": "textAlign: 'left' usually maps to the writing direction, but explicitly use 'auto' or 'right' when forcing alignment."
+  },
+  "components": {
+    "buttons": {
+      "primary": {
+        "background": "#0033CC",
+        "text": "#FFFFFF",
+        "border_radius": 9999,
+        "padding_vertical": 16,
+        "font_weight": "700",
+        "align_items": "center",
+        "shadow": "0px 4px 12px rgba(0, 51, 204, 0.25)"
+      },
+      "accent": {
+        "background": "#FF5A36",
+        "text": "#FFFFFF",
+        "border_radius": 9999,
+        "padding_vertical": 16,
+        "font_weight": "700",
+        "align_items": "center"
+      },
+      "outline": {
+        "background": "transparent",
+        "border": "1px solid #E4E4E7",
+        "text": "#0A0A0A"
+      }
+    },
+    "cards": {
+      "surface": {
+        "background": "#FFFFFF",
+        "border": "1px solid rgba(0,0,0,0.05)",
+        "border_radius": 20,
+        "padding": 20,
+        "shadow": "0px 4px 20px rgba(0,0,0,0.03)"
+      }
+    },
+    "inputs": {
+      "default": {
+        "background": "#F4F4F5",
+        "border_radius": 12,
+        "padding": 16,
+        "font_family": "Tajawal",
+        "text_color": "#0A0A0A"
+      },
+      "focused": {
+        "border": "1px solid #0033CC",
+        "background": "#FFFFFF"
+      }
+    },
+    "bottom_tab_bar": {
+      "background": "#FFFFFF",
+      "border_top": "1px solid rgba(0,0,0,0.05)",
+      "active_color": "#0033CC",
+      "inactive_color": "#A1A1AA",
+      "style": "floating or clean flat style"
+    }
+  },
+  "media": {
+    "image_urls": [
+      {
+        "category": "onboarding_or_mentor",
+        "url": "https://static.prod-images.emergentagent.com/jobs/e541b2dc-ff18-436b-81a3-89cf2bf9af07/images/341b89a940edbf6be2b004b421336cdf14ab93555f04c72fb135818f1ce802fe.png",
+        "description": "3D minimalist illustration of a friendly AI mentor glowing warmly. Use for 'AI Mentor' intro screen or academy module."
+      },
+      {
+        "category": "career_growth",
+        "url": "https://static.prod-images.emergentagent.com/jobs/e541b2dc-ff18-436b-81a3-89cf2bf9af07/images/a0a42a731dd9238f3ab0bbc2f57bd67ede7d3900aba8d6b72185247ae12fecf9.png",
+        "description": "Abstract 3D geometric shapes representing career growth. Use for Job Listings empty state, header background, or competency test success screen."
+      },
+      {
+        "category": "company_office",
+        "url": "https://images.unsplash.com/photo-1775709610612-c589e29679ea?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwxfHx0ZWNoJTIwY29tcGFueSUyMG9mZmljZSUyMG1vZGVybnxlbnwwfHx8fDE3NzgxNTQwNTh8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern office space. Use as a placeholder for Company Profile header images or Job Listing banners."
+      },
+      {
+        "category": "company_office_2",
+        "url": "https://images.unsplash.com/photo-1765728617352-895327fcf036?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwzfHx0ZWNoJTIwY29tcGFueSUyMG9mZmljZSUyMG1vZGVybnxlbnwwfHx8fDE3NzgxNTQwNTh8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern hallway. Use as additional employer branding image."
+      }
+    ]
+  },
+  "testing": {
+    "attribute": "testID",
+    "note": "React Native uses 'testID' instead of 'data-testid'. ALL interactive elements must have a semantic testID (e.g., 'login-submit-button')."
+  },
+  "instructions_to_main_agent": [
+    "Build the Tamkeen app using Expo (React Native).",
+    "Ensure I18nManager is configured for RTL (forceRTL: true) so flex-row naturally handles Arabic layouts.",
+    "Use standard StyleSheet or styled-components/NativeWind reflecting the spacing and color tokens defined here.",
+    "DO NOT use generic teal/purple; strictly adhere to the Cobalt Blue (#0033CC) and Signal Orange (#FF5A36) palette.",
+    "Ensure text scaling is appropriate for Arabic fonts (Cairo for headers, Tajawal for body). If custom fonts cannot be loaded easily, use standard system fonts but maintain the weight hierarchy.",
+    "For the student dashboard, implement a 'bento grid' style layout where different widgets (AI mentor, test scores, job recommendations) are distinct, soft-shadowed white cards on the #FAFAFA background.",
+    "Apply testID to all interactable UI elements for testing."
+  ]
+}
