@@ -15,7 +15,14 @@ export default function Login() {
   const submit = async () => {
     setBusy(true);
     try { await login(email.trim(), password); router.replace('/'); }
-    catch (e: any) { Alert.alert('خطأ', e.message); }
+    catch (e: any) {
+      if (e.message === 'EMAIL_NOT_VERIFIED') {
+        try { await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/resend-code`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email: email.trim(), purpose:'verify'})}); } catch {}
+        router.replace({ pathname: '/auth/verify', params: { email: email.trim() } });
+      } else {
+        Alert.alert('خطأ', e.message);
+      }
+    }
     finally { setBusy(false); }
   };
 
@@ -60,6 +67,9 @@ export default function Login() {
 
           <TouchableOpacity testID="goto-welcome" onPress={() => router.replace('/auth/welcome')} style={{marginTop: theme.spacing.lg, alignItems:'center'}}>
             <Text style={{color: theme.colors.primary, fontWeight: '600'}}>ليس لديك حساب؟ إنشاء حساب</Text>
+          </TouchableOpacity>
+          <TouchableOpacity testID="goto-forgot" onPress={() => router.push('/auth/forgot')} style={{marginTop: theme.spacing.sm, alignItems:'center'}}>
+            <Text style={{color: theme.colors.textSec, fontWeight: '600', fontSize: 13}}>نسيت كلمة السر؟</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -9,6 +9,9 @@ import logging
 import bcrypt
 import jwt
 import httpx
+import asyncio
+import random
+import resend
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
 
@@ -28,6 +31,48 @@ JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALG = "HS256"
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
 GEMINI_MODEL = "gemini-3.1-pro-preview"
+
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+APP_NAME = os.environ.get('APP_NAME', 'Tamkeen')
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+async def send_otp_email(to_email: str, code: str, purpose: str = "verify"):
+    title = "تأكيد البريد الإلكتروني" if purpose == "verify" else "إعادة تعيين كلمة السر"
+    sub = "أكمل التسجيل بإدخال الرمز" if purpose == "verify" else "استخدم هذا الرمز لتعيين كلمة سر جديدة"
+    html = f"""
+    <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;padding:32px;background:#fafafa">
+      <div style="background:#fff;border-radius:24px;padding:40px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+        <div style="font-size:36px;font-weight:800;color:#0033CC;letter-spacing:-1px">{APP_NAME}</div>
+        <div style="height:1px;background:#eee;margin:24px 0"></div>
+        <h2 style="color:#0a0a0a;font-size:20px;margin:0 0 8px">{title}</h2>
+        <p style="color:#52525B;margin:0 0 28px">{sub}</p>
+        <div style="background:#E6ECFF;border-radius:16px;padding:24px;display:inline-block;min-width:240px">
+          <div style="font-size:36px;font-weight:800;letter-spacing:8px;color:#0033CC;font-family:monospace">{code}</div>
+        </div>
+        <p style="color:#A1A1AA;font-size:13px;margin-top:28px">صالح لمدة 10 دقائق فقط. لا تشاركه مع أحد.</p>
+      </div>
+      <p style="color:#A1A1AA;font-size:11px;text-align:center;margin-top:16px">© {APP_NAME} • منصة التعليم والتوظيف الذكي</p>
+    </div>
+    """
+    if not RESEND_API_KEY:
+        logger = logging.getLogger(__name__)
+        logger.warning(f"[OTP DEV-MODE] {to_email} → {code} ({purpose})")
+        print(f"\n========== OTP for {to_email} ==========\n  CODE: {code}\n  PURPOSE: {purpose}\n========================================\n")
+        return
+    params = {"from": f"{APP_NAME} <{SENDER_EMAIL}>", "to": [to_email], "subject": f"{APP_NAME} - {title} ({code})", "html": html}
+    try:
+        await asyncio.to_thread(resend.Emails.send, params)
+    except Exception as e:
+        msg = str(e)
+        # In Resend testing mode, sending is restricted to verified email — log code for dev
+        if "testing emails" in msg or "verify a domain" in msg or "403" in msg:
+            logging.warning(f"[OTP RESEND-RESTRICTED] {to_email} → {code} ({purpose}) — verify domain at resend.com/domains")
+            print(f"\n⚠️  RESEND TEST MODE — OTP for {to_email}\n  CODE: {code}\n  PURPOSE: {purpose}\n  Verify a domain at https://resend.com/domains for production sending.\n")
+            return  # do not fail registration
+        logging.exception("Resend send error")
+        raise HTTPException(500, f"تعذر إرسال البريد: {msg[:140]}")
 
 app = FastAPI(title="Tamkeen API")
 api = APIRouter(prefix="/api")
@@ -145,6 +190,7 @@ async def register(payload: RegisterIn):
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="البريد مستخدم مسبقاً")
     user_id = f"u_{uuid.uuid4().hex[:12]}"
+    requires_verify = payload.role in ("student", "employer")
     doc = {
         "user_id": user_id,
         "email": email,
@@ -161,13 +207,108 @@ async def register(payload: RegisterIn):
         "bio": "",
         "passed_competency": False,
         "auth_provider": "email",
+        "email_verified": not requires_verify,
         "created_at": datetime.now(timezone.utc),
     }
     await db.users.insert_one(doc)
+    if requires_verify:
+        code = f"{random.randint(0, 999999):06d}"
+        await db.otps.update_one(
+            {"email": email, "purpose": "verify"},
+            {"$set": {"email": email, "purpose": "verify", "code": code,
+                      "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10),
+                      "attempts": 0, "created_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+        await send_otp_email(email, code, "verify")
+        return {"requires_verification": True, "email": email, "message": "تم إرسال رمز التحقق إلى بريدك"}
     token = create_token(user_id, payload.role)
-    doc.pop("password_hash", None)
-    doc.pop("_id", None)
+    doc.pop("password_hash", None); doc.pop("_id", None)
     return {"token": token, "user": doc}
+
+class VerifyIn(BaseModel):
+    email: EmailStr
+    code: str
+
+@api.post("/auth/verify-email")
+async def verify_email(payload: VerifyIn):
+    email = payload.email.lower()
+    rec = await db.otps.find_one({"email": email, "purpose": "verify"})
+    if not rec: raise HTTPException(400, "لا يوجد رمز نشط، اطلب رمزاً جديداً")
+    if rec.get("attempts", 0) >= 5: raise HTTPException(429, "محاولات كثيرة، اطلب رمزاً جديداً")
+    if rec["expires_at"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(400, "انتهت صلاحية الرمز")
+    if rec["code"] != payload.code.strip():
+        await db.otps.update_one({"_id": rec["_id"]}, {"$inc": {"attempts": 1}})
+        raise HTTPException(400, "رمز غير صحيح")
+    await db.users.update_one({"email": email}, {"$set": {"email_verified": True}})
+    await db.otps.delete_one({"_id": rec["_id"]})
+    user = await db.users.find_one({"email": email}, {"_id": 0, "password_hash": 0})
+    token = create_token(user["user_id"], user["role"])
+    return {"token": token, "user": user}
+
+class ResendIn(BaseModel):
+    email: EmailStr
+    purpose: Literal["verify", "reset"] = "verify"
+
+@api.post("/auth/resend-code")
+async def resend_code(payload: ResendIn):
+    email = payload.email.lower()
+    user = await db.users.find_one({"email": email})
+    if not user: raise HTTPException(404, "البريد غير مسجل")
+    if payload.purpose == "verify" and user.get("email_verified"):
+        raise HTTPException(400, "البريد مفعّل مسبقاً")
+    code = f"{random.randint(0, 999999):06d}"
+    await db.otps.update_one(
+        {"email": email, "purpose": payload.purpose},
+        {"$set": {"email": email, "purpose": payload.purpose, "code": code,
+                  "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10),
+                  "attempts": 0, "created_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    await send_otp_email(email, code, payload.purpose)
+    return {"ok": True, "message": "تم إرسال الرمز"}
+
+class ForgotIn(BaseModel):
+    email: EmailStr
+
+@api.post("/auth/forgot-password")
+async def forgot_password(payload: ForgotIn):
+    email = payload.email.lower()
+    user = await db.users.find_one({"email": email})
+    if user:
+        code = f"{random.randint(0, 999999):06d}"
+        await db.otps.update_one(
+            {"email": email, "purpose": "reset"},
+            {"$set": {"email": email, "purpose": "reset", "code": code,
+                      "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10),
+                      "attempts": 0, "created_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+        await send_otp_email(email, code, "reset")
+    return {"ok": True, "message": "إن كان البريد مسجلاً، فقد أُرسل إليه رمز إعادة التعيين"}
+
+class ResetIn(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str
+
+@api.post("/auth/reset-password")
+async def reset_password(payload: ResetIn):
+    if len(payload.new_password) < 6:
+        raise HTTPException(400, "كلمة السر قصيرة")
+    email = payload.email.lower()
+    rec = await db.otps.find_one({"email": email, "purpose": "reset"})
+    if not rec: raise HTTPException(400, "لا يوجد رمز نشط")
+    if rec.get("attempts", 0) >= 5: raise HTTPException(429, "محاولات كثيرة")
+    if rec["expires_at"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(400, "انتهت صلاحية الرمز")
+    if rec["code"] != payload.code.strip():
+        await db.otps.update_one({"_id": rec["_id"]}, {"$inc": {"attempts": 1}})
+        raise HTTPException(400, "رمز غير صحيح")
+    await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(payload.new_password)}})
+    await db.otps.delete_one({"_id": rec["_id"]})
+    return {"ok": True, "message": "تم تحديث كلمة السر"}
 
 @api.post("/auth/login")
 async def login(payload: LoginIn):
@@ -175,9 +316,10 @@ async def login(payload: LoginIn):
     user = await db.users.find_one({"email": email})
     if not user or not user.get("password_hash") or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="بريد أو كلمة سر غير صحيحة")
+    if user.get("role") in ("student","employer") and not user.get("email_verified"):
+        raise HTTPException(status_code=403, detail="EMAIL_NOT_VERIFIED")
     token = create_token(user["user_id"], user["role"])
-    user.pop("password_hash", None)
-    user.pop("_id", None)
+    user.pop("password_hash", None); user.pop("_id", None)
     return {"token": token, "user": user}
 
 @api.get("/auth/me")
@@ -704,6 +846,7 @@ async def on_start():
     await db.applications.create_index([("job_id",1),("student_id",1)])
     await db.chat_messages.create_index([("session_id",1),("user_id",1)])
     await db.notifications.create_index([("user_id",1),("created_at",-1)])
+    await db.otps.create_index([("email",1),("purpose",1)], unique=True)
 
     # seed questions
     if await db.questions.count_documents({}) == 0:
@@ -755,6 +898,7 @@ async def on_start():
                 "bio": "",
                 "passed_competency": False,
                 "auth_provider": "email",
+                "email_verified": True,
                 "created_at": datetime.now(timezone.utc),
             })
 

@@ -26,7 +26,7 @@ export default function Register() {
     if (!email || !password || !name) return Alert.alert('تنبيه','أكمل البيانات الأساسية');
     setBusy(true);
     try {
-      await register({
+      const r: any = await register({
         email: email.trim(), password, name, role,
         department: role==='student'?department:undefined,
         level: role==='student'?level:undefined,
@@ -35,7 +35,11 @@ export default function Register() {
         company_address: role==='employer'?address:undefined,
         company_specialty: role==='employer'?specialty:undefined,
       });
-      router.replace('/');
+      if (r?.requires_verification) {
+        router.replace({ pathname: '/auth/verify', params: { email: email.trim() } });
+      } else {
+        router.replace('/');
+      }
     } catch (e: any) { Alert.alert('خطأ', e.message); }
     finally { setBusy(false); }
   };

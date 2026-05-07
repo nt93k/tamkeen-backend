@@ -7,7 +7,11 @@ type AuthCtx = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (payload: any) => Promise<User>;
+  register: (payload: any) => Promise<any>;
+  verifyEmail: (email: string, code: string) => Promise<User>;
+  resendCode: (email: string, purpose?: 'verify'|'reset') => Promise<any>;
+  forgotPassword: (email: string) => Promise<any>;
+  resetPassword: (email: string, code: string, new_password: string) => Promise<any>;
   googleExchange: (sessionId: string, role?: string) => Promise<User>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -40,15 +44,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   const register = async (payload: any) => {
     const r = await api('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
+    if (r.requires_verification) return r;
     await setToken(r.token); setUser(r.user); return r.user;
   };
+  const verifyEmail = async (email: string, code: string) => {
+    const r = await api('/auth/verify-email', { method: 'POST', body: JSON.stringify({ email, code }) });
+    await setToken(r.token); setUser(r.user); return r.user;
+  };
+  const resendCode = async (email: string, purpose: 'verify'|'reset' = 'verify') =>
+    api('/auth/resend-code', { method: 'POST', body: JSON.stringify({ email, purpose }) });
+  const forgotPassword = async (email: string) =>
+    api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+  const resetPassword = async (email: string, code: string, new_password: string) =>
+    api('/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, new_password }) });
   const googleExchange = async (session_id: string, role = 'student') => {
     const r = await api('/auth/google/exchange', { method: 'POST', body: JSON.stringify({ session_id, role }) });
     await setToken(r.token); setUser(r.user); return r.user;
   };
   const logout = async () => { await setToken(null); setUser(null); };
 
-  return <Ctx.Provider value={{ user, loading, login, register, googleExchange, logout, refresh, setUser }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, loading, login, register, verifyEmail, resendCode, forgotPassword, resetPassword, googleExchange, logout, refresh, setUser }}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);
