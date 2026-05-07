@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/api';
 import { theme, DEPARTMENTS, DEPT_NAME } from '../../src/theme';
+import { confirmAction, notify } from '../../src/dialog';
 
 export default function AdminQuestions() {
   const [list, setList] = useState<any[]>([]);
   const [filter, setFilter] = useState('all');
   const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const load = async () => { try { setList(await api('/admin/questions')||[]); } catch {} };
   useEffect(()=>{ load(); }, []);
 
-  const del = async (qid: string) => {
-    Alert.alert('تأكيد','حذف هذا السؤال؟',[
-      {text:'إلغاء', style:'cancel'},
-      {text:'حذف', style:'destructive', onPress: async () => {
-        try { await api(`/admin/questions/${qid}`, { method:'DELETE' }); load(); } catch(e:any){ Alert.alert('خطأ', e.message); }
-      }}
-    ]);
+  const del = (qid: string) => {
+    confirmAction('تأكيد', 'حذف هذا السؤال؟', async () => {
+      try { await api(`/admin/questions/${qid}`, { method:'DELETE' }); load(); }
+      catch(e:any){ notify('خطأ', e.message); }
+    });
   };
 
   const shown = filter==='all'?list:list.filter(q=>q.department===filter);
@@ -46,6 +46,9 @@ export default function AdminQuestions() {
             <View style={s.row}>
               <View style={s.dtag}><Text style={s.dtagT}>{DEPT_NAME[q.department]}</Text></View>
               <View style={s.ltag}><Text style={s.ltagT}>المرحلة {q.level}</Text></View>
+              <TouchableOpacity onPress={()=>setEditing(q)} testID={`edit-${q.id}`}>
+                <Ionicons name="create-outline" size={20} color={theme.colors.primary} />
+              </TouchableOpacity>
               <TouchableOpacity onPress={()=>del(q.id)} testID={`del-${q.id}`}>
                 <Ionicons name="trash" size={18} color={theme.colors.error} />
               </TouchableOpacity>
@@ -57,26 +60,37 @@ export default function AdminQuestions() {
           </View>
         ))}
       </ScrollView>
-      <AddQ visible={showAdd} onClose={()=>setShowAdd(false)} onAdded={load} />
+      <QForm visible={showAdd} initial={null} onClose={()=>setShowAdd(false)} onSaved={load} />
+      <QForm visible={!!editing} initial={editing} onClose={()=>setEditing(null)} onSaved={load} />
     </SafeAreaView>
   );
 }
 
-function AddQ({ visible, onClose, onAdded }: any) {
+function QForm({ visible, initial, onClose, onSaved }: any) {
   const [q, setQ] = useState('');
   const [opts, setOpts] = useState(['','','','']);
   const [correct, setCorrect] = useState(0);
   const [dept, setDept] = useState('cs');
   const [lvl, setLvl] = useState(1);
   const [busy, setBusy] = useState(false);
+  const isEdit = !!initial;
+
+  useEffect(()=>{
+    if (initial) {
+      setQ(initial.q); setOpts([...initial.options, '', '', '', ''].slice(0,4)); setCorrect(initial.correct);
+      setDept(initial.department); setLvl(initial.level);
+    } else { setQ(''); setOpts(['','','','']); setCorrect(0); setDept('cs'); setLvl(1); }
+  }, [visible, initial]);
 
   const submit = async () => {
-    if (!q.trim() || opts.some(o=>!o.trim())) return Alert.alert('تنبيه','أكمل السؤال والخيارات');
+    if (!q.trim() || opts.some(o=>!o.trim())) return notify('تنبيه','أكمل السؤال والخيارات');
     setBusy(true);
     try {
-      await api('/admin/questions', { method:'POST', body: JSON.stringify({ q, options: opts, correct, department: dept, level: lvl })});
-      setQ(''); setOpts(['','','','']); setCorrect(0); onAdded(); onClose();
-    } catch(e:any) { Alert.alert('خطأ', e.message); } finally { setBusy(false); }
+      const body = { q, options: opts, correct, department: dept, level: lvl };
+      if (isEdit) await api(`/admin/questions/${initial.id}`, { method:'PUT', body: JSON.stringify(body) });
+      else await api('/admin/questions', { method:'POST', body: JSON.stringify(body) });
+      onSaved(); onClose();
+    } catch(e:any) { notify('خطأ', e.message); } finally { setBusy(false); }
   };
 
   return (
@@ -85,7 +99,7 @@ function AddQ({ visible, onClose, onAdded }: any) {
         <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1}}>
           <View style={s.mhead}>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
-            <Text style={s.mTitle}>سؤال جديد</Text>
+            <Text style={s.mTitle}>{isEdit?'تعديل سؤال':'سؤال جديد'}</Text>
             <View style={{width:24}} />
           </View>
           <ScrollView contentContainerStyle={{padding: theme.spacing.lg}}>
@@ -109,7 +123,7 @@ function AddQ({ visible, onClose, onAdded }: any) {
               </View>
             ))}
             <TouchableOpacity testID="save-q" onPress={submit} disabled={busy} style={s.btn}>
-              <Text style={s.btnT}>{busy?'...':'حفظ السؤال'}</Text>
+              <Text style={s.btnT}>{busy?'...':isEdit?'حفظ التعديلات':'حفظ السؤال'}</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>

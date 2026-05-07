@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/api';
 import { theme, DEPARTMENTS, DEPT_NAME } from '../../src/theme';
+import { confirmAction, notify } from '../../src/dialog';
 
 export default function AdminCourses() {
   const [list, setList] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const load = async () => { try { setList(await api('/courses')||[]); } catch {} };
   useEffect(()=>{ load(); }, []);
   const del = (cid:string) => {
-    Alert.alert('تأكيد','حذف هذه الدورة؟',[
-      {text:'إلغاء', style:'cancel'},
-      {text:'حذف', style:'destructive', onPress: async () => {
-        try { await api(`/admin/courses/${cid}`, { method:'DELETE' }); load(); } catch(e:any){ Alert.alert('خطأ', e.message); }
-      }}
-    ]);
+    confirmAction('تأكيد', 'حذف هذه الدورة؟', async () => {
+      try { await api(`/admin/courses/${cid}`, { method:'DELETE' }); load(); }
+      catch(e:any){ notify('خطأ', e.message); }
+    });
   };
   return (
     <SafeAreaView style={s.c} testID="admin-courses">
@@ -32,42 +32,67 @@ export default function AdminCourses() {
           <View key={c.course_id} style={s.card}>
             <View style={s.row}>
               <View style={s.dtag}><Text style={s.dtagT}>{DEPT_NAME[c.department]}</Text></View>
+              {c.provider && <View style={s.ptag}><Text style={s.ptagT}>{c.provider}</Text></View>}
               <Text style={s.dur}>⏱ {c.duration_min} د • {c.lessons?.length||0} دروس</Text>
-              <TouchableOpacity onPress={()=>del(c.course_id)}>
+              <TouchableOpacity onPress={()=>setEditing(c)} testID={`edit-c-${c.course_id}`}>
+                <Ionicons name="create-outline" size={20} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={()=>del(c.course_id)} testID={`del-c-${c.course_id}`}>
                 <Ionicons name="trash" size={18} color={theme.colors.error} />
               </TouchableOpacity>
             </View>
             <Text style={s.title}>{c.title}</Text>
             <Text style={s.desc}>{c.summary}</Text>
+            {c.external_url ? (
+              <TouchableOpacity onPress={()=>Linking.openURL(c.external_url)}>
+                <Text style={s.link} numberOfLines={1}>🔗 {c.external_url}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         ))}
       </ScrollView>
-      <AddC visible={showAdd} onClose={()=>setShowAdd(false)} onAdded={load} />
+      <CForm visible={showAdd} initial={null} onClose={()=>setShowAdd(false)} onSaved={load} />
+      <CForm visible={!!editing} initial={editing} onClose={()=>setEditing(null)} onSaved={load} />
     </SafeAreaView>
   );
 }
 
-function AddC({ visible, onClose, onAdded }: any) {
+function CForm({ visible, initial, onClose, onSaved }: any) {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [dept, setDept] = useState('cs');
   const [duration, setDuration] = useState('20');
-  const [lessons, setLessons] = useState<any[]>([{id:'l1', title:'', content:'', video_minutes:5}]);
+  const [provider, setProvider] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [lessons, setLessons] = useState<any[]>([{id:'l1', title:'', content:'', video_minutes:5, url:''}]);
   const [busy, setBusy] = useState(false);
+  const isEdit = !!initial;
 
-  const addLesson = () => setLessons(l => [...l, {id:`l${l.length+1}`, title:'', content:'', video_minutes:5}]);
+  useEffect(()=>{
+    if (initial) {
+      setTitle(initial.title); setSummary(initial.summary); setDept(initial.department);
+      setDuration(String(initial.duration_min||20)); setProvider(initial.provider||''); setExternalUrl(initial.external_url||'');
+      setLessons(initial.lessons?.length ? initial.lessons.map((l:any)=>({...l, url: l.url||''})) : [{id:'l1', title:'', content:'', video_minutes:5, url:''}]);
+    } else {
+      setTitle(''); setSummary(''); setDept('cs'); setDuration('20'); setProvider(''); setExternalUrl('');
+      setLessons([{id:'l1', title:'', content:'', video_minutes:5, url:''}]);
+    }
+  }, [visible, initial]);
+
+  const addLesson = () => setLessons(l => [...l, {id:`l${l.length+1}`, title:'', content:'', video_minutes:5, url:''}]);
+  const removeLesson = (i:number) => setLessons(l => l.filter((_,idx)=>idx!==i));
   const setL = (i:number, k:string, v:any) => setLessons(l => l.map((x,idx)=> idx===i?{...x,[k]:v}:x));
 
   const submit = async () => {
-    if (!title.trim() || !summary.trim() || lessons.some(l=>!l.title)) return Alert.alert('تنبيه','أكمل البيانات');
+    if (!title.trim() || !summary.trim()) return notify('تنبيه','أكمل العنوان والوصف');
+    if (lessons.length && lessons.some(l=>!l.title)) return notify('تنبيه','أكمل عناوين الدروس');
     setBusy(true);
     try {
-      await api('/admin/courses', { method:'POST', body: JSON.stringify({
-        title, summary, department: dept, duration_min: parseInt(duration)||20, lessons,
-      })});
-      setTitle(''); setSummary(''); setLessons([{id:'l1', title:'', content:'', video_minutes:5}]);
-      onAdded(); onClose();
-    } catch(e:any){ Alert.alert('خطأ', e.message); } finally { setBusy(false); }
+      const body = { title, summary, department: dept, duration_min: parseInt(duration)||20, provider: provider||null, external_url: externalUrl||null, lessons };
+      if (isEdit) await api(`/admin/courses/${initial.course_id}`, { method:'PUT', body: JSON.stringify(body) });
+      else await api('/admin/courses', { method:'POST', body: JSON.stringify(body) });
+      onSaved(); onClose();
+    } catch(e:any){ notify('خطأ', e.message); } finally { setBusy(false); }
   };
 
   return (
@@ -76,7 +101,7 @@ function AddC({ visible, onClose, onAdded }: any) {
         <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1}}>
           <View style={s.mhead}>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
-            <Text style={s.mTitle}>كورس جديد</Text>
+            <Text style={s.mTitle}>{isEdit?'تعديل كورس':'كورس جديد'}</Text>
             <View style={{width:24}} />
           </View>
           <ScrollView contentContainerStyle={{padding: theme.spacing.lg}}>
@@ -90,20 +115,35 @@ function AddC({ visible, onClose, onAdded }: any) {
             ))}</View>
             <Text style={s.lab}>المدة (بالدقائق)</Text>
             <TextInput style={s.in} value={duration} onChangeText={setDuration} keyboardType="numeric" />
+            <Text style={s.lab}>المنصة (اختياري)</Text>
+            <View style={s.chips}>
+              {['Coursera','Udemy','edX','YouTube','Khan Academy','أخرى'].map(p=>(
+                <TouchableOpacity key={p} onPress={()=>setProvider(p)} style={[s.chip, provider===p&&s.chipA]}><Text style={[s.chipT, provider===p&&{color:'#fff'}]}>{p}</Text></TouchableOpacity>
+              ))}
+            </View>
+            <Text style={s.lab}>رابط الكورس الخارجي (URL)</Text>
+            <TextInput style={s.in} value={externalUrl} onChangeText={setExternalUrl} placeholder="https://www.coursera.org/learn/..." placeholderTextColor={theme.colors.textTer} autoCapitalize="none" />
             <View style={[s.row, {marginTop: theme.spacing.lg}]}>
               <Text style={[s.lab,{marginTop:0, flex:1}]}>الدروس ({lessons.length})</Text>
               <TouchableOpacity onPress={addLesson} style={s.miniBtn}><Text style={s.miniBtnT}>+ درس</Text></TouchableOpacity>
             </View>
             {lessons.map((l,i)=>(
               <View key={i} style={s.lcard}>
-                <Text style={s.lnum}>درس {i+1}</Text>
+                <View style={s.row}>
+                  <Text style={s.lnum}>درس {i+1}</Text>
+                  <View style={{flex:1}} />
+                  {lessons.length>1 && (
+                    <TouchableOpacity onPress={()=>removeLesson(i)}><Ionicons name="trash" size={16} color={theme.colors.error} /></TouchableOpacity>
+                  )}
+                </View>
                 <TextInput style={s.in} value={l.title} onChangeText={t=>setL(i,'title',t)} placeholder="عنوان الدرس" placeholderTextColor={theme.colors.textTer} />
-                <TextInput style={[s.in,{height:60}]} multiline value={l.content} onChangeText={t=>setL(i,'content',t)} placeholder="محتوى الدرس" placeholderTextColor={theme.colors.textTer} />
+                <TextInput style={[s.in,{height:60}]} multiline value={l.content} onChangeText={t=>setL(i,'content',t)} placeholder="محتوى الدرس (اختياري)" placeholderTextColor={theme.colors.textTer} />
+                <TextInput style={s.in} value={l.url||''} onChangeText={t=>setL(i,'url',t)} placeholder="رابط الفيديو (YouTube/Coursera...)" autoCapitalize="none" placeholderTextColor={theme.colors.textTer} />
                 <TextInput style={s.in} value={String(l.video_minutes)} onChangeText={t=>setL(i,'video_minutes', parseInt(t)||0)} placeholder="دقائق" keyboardType="numeric" placeholderTextColor={theme.colors.textTer} />
               </View>
             ))}
             <TouchableOpacity testID="save-c" onPress={submit} disabled={busy} style={s.btn}>
-              <Text style={s.btnT}>{busy?'...':'حفظ الكورس'}</Text>
+              <Text style={s.btnT}>{busy?'...':isEdit?'حفظ التعديلات':'حفظ الكورس'}</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -122,9 +162,12 @@ const s = StyleSheet.create({
   row: { flexDirection:'row', alignItems:'center', gap: 8 },
   dtag: { backgroundColor: theme.colors.primaryLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: theme.radius.full },
   dtagT: { color: theme.colors.primary, fontSize: 11, fontWeight:'700' },
+  ptag: { backgroundColor: theme.colors.accentLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: theme.radius.full },
+  ptagT: { color: theme.colors.accent, fontSize: 11, fontWeight:'700' },
   dur: { color: theme.colors.textSec, fontSize: 12, flex:1, textAlign:'right' },
   title: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginTop: 8, textAlign:'right' },
   desc: { color: theme.colors.textSec, marginTop: 4, textAlign:'right' },
+  link: { color: theme.colors.primary, fontSize: 12, marginTop: 8, textAlign:'right' },
   chips: { flexDirection:'row', flexWrap:'wrap', gap: 8, marginTop: 8 },
   chip: { backgroundColor: theme.colors.surfaceAlt, paddingHorizontal: 14, paddingVertical: 8, borderRadius: theme.radius.full },
   chipA: { backgroundColor: theme.colors.primary },

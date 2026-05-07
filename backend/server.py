@@ -530,6 +530,13 @@ async def admin_add_q(payload: QuestionIn, user: dict = Depends(require_role("ad
     doc = {"id": f"q_{uuid.uuid4().hex[:10]}", **payload.dict()}
     await db.questions.insert_one(doc); doc.pop("_id", None); return doc
 
+@api.put("/admin/questions/{qid}")
+async def admin_edit_q(qid: str, payload: QuestionIn, user: dict = Depends(require_role("admin"))):
+    upd = payload.dict()
+    r = await db.questions.update_one({"id": qid}, {"$set": upd})
+    if r.matched_count == 0: raise HTTPException(404, "غير موجود")
+    return {"ok": True}
+
 @api.delete("/admin/questions/{qid}")
 async def admin_del_q(qid: str, user: dict = Depends(require_role("admin"))):
     await db.questions.delete_one({"id": qid}); return {"ok": True}
@@ -538,6 +545,13 @@ async def admin_del_q(qid: str, user: dict = Depends(require_role("admin"))):
 async def admin_add_course(payload: CourseIn, user: dict = Depends(require_role("admin"))):
     doc = {"course_id": f"c_{uuid.uuid4().hex[:10]}", "order": 99, "created_at": datetime.now(timezone.utc), **payload.dict()}
     await db.courses.insert_one(doc); doc.pop("_id", None); return doc
+
+@api.put("/admin/courses/{cid}")
+async def admin_edit_course(cid: str, payload: CourseIn, user: dict = Depends(require_role("admin"))):
+    upd = payload.dict()
+    r = await db.courses.update_one({"course_id": cid}, {"$set": upd})
+    if r.matched_count == 0: raise HTTPException(404, "غير موجود")
+    return {"ok": True}
 
 @api.delete("/admin/courses/{cid}")
 async def admin_del_course(cid: str, user: dict = Depends(require_role("admin"))):
