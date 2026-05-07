@@ -32,6 +32,7 @@ export default function AdminCourses() {
           <View key={c.course_id} style={s.card}>
             <View style={s.row}>
               <View style={s.dtag}><Text style={s.dtagT}>{DEPT_NAME[c.department]}</Text></View>
+              <View style={s.ltag}><Text style={s.ltagT}>المرحلة {c.level||1}</Text></View>
               {c.provider && <View style={s.ptag}><Text style={s.ptagT}>{c.provider}</Text></View>}
               <Text style={s.dur}>⏱ {c.duration_min} د • {c.lessons?.length||0} دروس</Text>
               <TouchableOpacity onPress={()=>setEditing(c)} testID={`edit-c-${c.course_id}`}>
@@ -61,6 +62,7 @@ function CForm({ visible, initial, onClose, onSaved }: any) {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [dept, setDept] = useState('cs');
+  const [lvl, setLvl] = useState(1);
   const [duration, setDuration] = useState('20');
   const [provider, setProvider] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
@@ -71,10 +73,11 @@ function CForm({ visible, initial, onClose, onSaved }: any) {
   useEffect(()=>{
     if (initial) {
       setTitle(initial.title); setSummary(initial.summary); setDept(initial.department);
+      setLvl(initial.level||1);
       setDuration(String(initial.duration_min||20)); setProvider(initial.provider||''); setExternalUrl(initial.external_url||'');
       setLessons(initial.lessons?.length ? initial.lessons.map((l:any)=>({...l, url: l.url||''})) : [{id:'l1', title:'', content:'', video_minutes:5, url:''}]);
     } else {
-      setTitle(''); setSummary(''); setDept('cs'); setDuration('20'); setProvider(''); setExternalUrl('');
+      setTitle(''); setSummary(''); setDept('cs'); setLvl(1); setDuration('20'); setProvider(''); setExternalUrl('');
       setLessons([{id:'l1', title:'', content:'', video_minutes:5, url:''}]);
     }
   }, [visible, initial]);
@@ -88,7 +91,7 @@ function CForm({ visible, initial, onClose, onSaved }: any) {
     if (lessons.length && lessons.some(l=>!l.title)) return notify('تنبيه','أكمل عناوين الدروس');
     setBusy(true);
     try {
-      const body = { title, summary, department: dept, duration_min: parseInt(duration)||20, provider: provider||null, external_url: externalUrl||null, lessons };
+      const body = { title, summary, department: dept, level: lvl, duration_min: parseInt(duration)||20, provider: provider||null, external_url: externalUrl||null, lessons };
       if (isEdit) await api(`/admin/courses/${initial.course_id}`, { method:'PUT', body: JSON.stringify(body) });
       else await api('/admin/courses', { method:'POST', body: JSON.stringify(body) });
       onSaved(); onClose();
@@ -112,6 +115,10 @@ function CForm({ visible, initial, onClose, onSaved }: any) {
             <Text style={s.lab}>القسم</Text>
             <View style={s.chips}>{DEPARTMENTS.map(d=>(
               <TouchableOpacity key={d.id} onPress={()=>setDept(d.id)} style={[s.chip, dept===d.id&&s.chipA]}><Text style={[s.chipT, dept===d.id&&{color:'#fff'}]}>{d.name}</Text></TouchableOpacity>
+            ))}</View>
+            <Text style={s.lab}>المرحلة الدراسية</Text>
+            <View style={s.chips}>{[1,2,3,4].map(n=>(
+              <TouchableOpacity key={n} onPress={()=>setLvl(n)} style={[s.chip, lvl===n&&s.chipA]}><Text style={[s.chipT, lvl===n&&{color:'#fff'}]}>المرحلة {n}</Text></TouchableOpacity>
             ))}</View>
             <Text style={s.lab}>المدة (بالدقائق)</Text>
             <TextInput style={s.in} value={duration} onChangeText={setDuration} keyboardType="numeric" />
@@ -164,6 +171,8 @@ const s = StyleSheet.create({
   dtagT: { color: theme.colors.primary, fontSize: 11, fontWeight:'700' },
   ptag: { backgroundColor: theme.colors.accentLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: theme.radius.full },
   ptagT: { color: theme.colors.accent, fontSize: 11, fontWeight:'700' },
+  ltag: { backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: theme.radius.full },
+  ltagT: { color: '#92400E', fontSize: 11, fontWeight:'700' },
   dur: { color: theme.colors.textSec, fontSize: 12, flex:1, textAlign:'right' },
   title: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginTop: 8, textAlign:'right' },
   desc: { color: theme.colors.textSec, marginTop: 4, textAlign:'right' },

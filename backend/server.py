@@ -401,9 +401,12 @@ async def my_applications(user: dict = Depends(require_role("student"))):
 
 # ============ Academy ============
 @api.get("/courses")
-async def list_courses(department: Optional[str] = None):
-    q = {"department": department} if department else {}
-    cur = db.courses.find(q, {"_id": 0}).sort("order", 1)
+async def list_courses(department: Optional[str] = None, level: Optional[int] = None):
+    q: dict = {}
+    if department: q["department"] = department
+    if level is not None:
+        q["$or"] = [{"level": {"$lte": level}}, {"level": {"$exists": False}}]
+    cur = db.courses.find(q, {"_id": 0}).sort([("level",1),("order",1)])
     return await cur.to_list(length=200)
 
 @api.get("/courses/{course_id}")
@@ -490,9 +493,12 @@ class QuestionIn(BaseModel):
 
 class CourseIn(BaseModel):
     department: str
+    level: int = 1
     title: str
     summary: str
     duration_min: int = 20
+    external_url: Optional[str] = None
+    provider: Optional[str] = None
     lessons: List[dict] = []
 
 class TicketIn(BaseModel):
@@ -663,19 +669,19 @@ SEED_QUESTIONS = {
 }
 
 SEED_COURSES = [
-    {"course_id": "c_cs_101", "department": "cs", "title": "أساسيات هياكل البيانات", "summary": "مقدمة سريعة لأهم هياكل البيانات.", "duration_min": 25, "order": 1,
+    {"course_id": "c_cs_101", "department": "cs", "level": 1, "title": "أساسيات هياكل البيانات", "summary": "مقدمة سريعة لأهم هياكل البيانات.", "duration_min": 25, "order": 1,
      "lessons": [
         {"id":"l1","title":"المصفوفات والقوائم","content":"المصفوفات تخزن عناصر متجاورة بحجم ثابت...","video_minutes":6},
         {"id":"l2","title":"الجداول والـ Hash","content":"جداول الهاش توفر وصول O(1) في المتوسط...","video_minutes":7},
         {"id":"l3","title":"الأشجار والرسوم","content":"الأشجار الثنائية وتطبيقاتها...","video_minutes":8},
      ]},
-    {"course_id":"c_ai_101","department":"ai","title":"أساسيات تعلم الآلة","summary":"مفاهيم أولية في الذكاء الاصطناعي.","duration_min":30,"order":1,
+    {"course_id":"c_ai_101","department":"ai","level":1,"title":"أساسيات تعلم الآلة","summary":"مفاهيم أولية في الذكاء الاصطناعي.","duration_min":30,"order":1,
      "lessons":[
         {"id":"l1","title":"التعلم المُشرف","content":"النماذج تتعلم من بيانات موسومة لتنبؤ القيم...","video_minutes":7},
         {"id":"l2","title":"الشبكات العصبية","content":"العصبونات والأوزان ودوال التنشيط...","video_minutes":9},
         {"id":"l3","title":"تقييم النماذج","content":"الدقة والاسترجاع والمصفوفة...","video_minutes":6},
      ]},
-    {"course_id":"c_acc_101","department":"accounting","title":"أساسيات المحاسبة","summary":"المعادلة المحاسبية والقوائم.","duration_min":20,"order":1,
+    {"course_id":"c_acc_101","department":"accounting","level":1,"title":"أساسيات المحاسبة","summary":"المعادلة المحاسبية والقوائم.","duration_min":20,"order":1,
      "lessons":[
         {"id":"l1","title":"المعادلة المحاسبية","content":"الأصول = الخصوم + حقوق الملكية...","video_minutes":5},
         {"id":"l2","title":"دفتر اليومية والأستاذ","content":"كيفية تسجيل القيود...","video_minutes":7},

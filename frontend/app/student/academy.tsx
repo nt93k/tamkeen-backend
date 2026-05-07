@@ -10,8 +10,14 @@ export default function Academy() {
   const { user } = useAuth();
   const [courses, setCourses] = useState<any[]>([]);
   useEffect(() => { (async () => {
-    try { setCourses(await api(`/courses${user?.department?`?department=${user.department}`:''}`) || []); } catch {}
-  })(); }, [user?.department]);
+    if (!user?.department) return;
+    try {
+      const params = new URLSearchParams();
+      params.set('department', user.department);
+      if (user.level) params.set('level', String(user.level));
+      setCourses(await api(`/courses?${params.toString()}`) || []);
+    } catch {}
+  })(); }, [user?.department, user?.level]);
 
   return (
     <SafeAreaView style={s.c} testID="academy-screen">
@@ -22,6 +28,7 @@ export default function Academy() {
           <TouchableOpacity key={c.course_id} testID={`course-${c.course_id}`} style={s.card} onPress={()=>router.push(`/course/${c.course_id}`)}>
             <View style={s.row}>
               <View style={s.tag}><Text style={s.tagT}>{DEPT_NAME[c.department]}</Text></View>
+              <View style={s.ltag}><Text style={s.ltagT}>المرحلة {c.level||1}</Text></View>
               <Text style={s.dur}>⏱ {c.duration_min} د</Text>
             </View>
             <Text style={s.title}>{c.title}</Text>
@@ -43,6 +50,8 @@ const s = StyleSheet.create({
   row: { flexDirection:'row', justifyContent:'space-between', alignItems:'center' },
   tag: { backgroundColor: theme.colors.accentLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: theme.radius.full },
   tagT: { color: theme.colors.accent, fontWeight: '700', fontSize: 12 },
+  ltag: { backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: theme.radius.full },
+  ltagT: { color: '#92400E', fontWeight: '700', fontSize: 12 },
   dur: { color: theme.colors.textSec, fontSize: 12 },
   title: { fontSize: 17, fontWeight: '700', color: theme.colors.text, marginTop: 8, textAlign:'right' },
   desc: { color: theme.colors.textSec, marginTop: 4, textAlign:'right' },
