@@ -858,7 +858,7 @@ async def on_start():
     demos = [
         {"email":"student@tamkeen.com","password":"Student123!","name":"سارة الطالبة","role":"student","department":"cs","level":3,"gender":"female"},
         {"email":"employer@tamkeen.com","password":"Employer123!","name":"أحمد المدير","role":"employer","company_name":"شركة تمكين التقنية","company_address":"الرياض","company_specialty":"تقنية معلومات"},
-        {"email":"abaskar078@gmail.com","password":"at2009eng","name":"مدير المنصة","role":"admin"},
+        {"email":"abaskar078@gmail.com","password":"abbas2006","name":"مدير المنصة","role":"admin"},
     ]
     for d in demos:
         existing = await db.users.find_one({"email": d["email"]})
