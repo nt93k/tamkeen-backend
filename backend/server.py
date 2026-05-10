@@ -1,3 +1,10 @@
+import sys
+#import os
+import os
+os.environ["EMERGENT_LLM_KEY"] = "dummy"
+os.environ["OPENAI_API_KEY"] = "dummy"
+# هذا السطر يخبر السيرفر أن ينظر للمجلد الرئيسي بحثاً عن المكتبات
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 from pathlib import Path
 ROOT_DIR = Path(__file__).parent
@@ -20,16 +27,18 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+#from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 # ============ DB ============
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+#mongo_url = os.environ['MONGO_URL']
+#client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient("mongodb+srv://ai0049_db_user:hg8PW7rSDZ6SklZL@cluster0.hvkmjgb.mongodb.net/?appName=Cluster0")
+db = client.get_database("tamkeen_db") # تأكد أن هذا السطر موجود تحت الـ client مباشرة
+#db = client[os.environ['DB_NAME']]
 
-JWT_SECRET = os.environ['JWT_SECRET']
-JWT_ALG = "HS256"
-EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
+JWT_SECRET = os.getenv("JWT_SECRET", "fallback_secret_for_local_testing")
+JWT_ALG = os.getenv("JWT_ALG", "HS256")
+#EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
 GEMINI_MODEL = "gemini-3.1-pro-preview"
 
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
@@ -922,3 +931,9 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+# في نهاية ملف server.py
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
