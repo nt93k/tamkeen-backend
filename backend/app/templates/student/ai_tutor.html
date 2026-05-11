@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}المساعد الذكي{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>🤖 المساعد الذكي</h2>
+  <p>مساعدك الشخصي في {{ profile.major }} — مدعوم بـ Google Gemini</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:1.5rem;align-items:start">
+
+  <!-- الشريط الجانبي -->
+  <div>
+    {% if latest_result and not latest_result.passed %}
+    <div class="card" style="margin-bottom:1.25rem;border-color:rgba(245,158,11,0.35)">
+      <div class="card-title">📊 نتيجتك الأخيرة</div>
+      <div class="score-circle failed" style="width:100px;height:100px;margin-bottom:1rem">
+        <div class="score-number" style="font-size:1.5rem">{{ latest_result.score|round(1) }}%</div>
+      </div>
+      {% if latest_result.weak_topics %}
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem">المواضيع التي تحتاج للمراجعة:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+        {% for topic in latest_result.weak_topics %}
+        <span class="badge badge-warning">{{ topic }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <button class="btn btn-primary btn-block" style="margin-top:1rem" onclick="loadStudyPlan('{{ latest_result.id }}')">
+        📚 عرض خطتي الدراسية
+      </button>
+    </div>
+    {% endif %}
+
+    <!-- توليد أسئلة تدريبية -->
+    <div class="card">
+      <div class="card-title">🎯 أسئلة تدريبية</div>
+      <div class="form-group">
+        <label class="form-label">الموضوع</label>
+        <input type="text" id="practice-topic" class="form-control" placeholder="مثال: قواعد البيانات">
+      </div>
+      <div class="form-group">
+        <label class="form-label">عدد الأسئلة</label>
+        <select id="practice-count" class="form-control">
+          <option value="3">3 أسئلة</option>
+          <option value="5" selected>5 أسئلة</option>
+          <option value="10">10 أسئلة</option>
+        </select>
+      </div>
+      <button class="btn btn-secondary btn-block" onclick="generatePractice()">
+        <span id="practice-btn-text">توليد الأسئلة</span>
+        <span class="loader" id="practice-loader" style="display:none"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- منطقة المحادثة -->
+  <div>
+    <div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-title" style="margin:0">محادثة مع المساعد</div>
+        <button class="btn btn-secondary btn-sm" onclick="clearChat()">مسح المحادثة</button>
+      </div>
+    </div>
+
+    <div class="chat-container" id="chat-wrap">
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-bubble bot">
+          مرحباً {{ profile.full_name }}! 👋 أنا مساعدك الذكي المتخصص في <strong>{{ profile.major }}</strong>.<br><br>
+          يمكنني مساعدتك في:<br>
+          • شرح المفاهيم الأكاديمية<br>
+          • تحضير أسئلة تدريبية<br>
+          • وضع خطط مراجعة مخصصة<br>
+          • الإجابة على استفساراتك في تخصصك<br><br>
+          كيف يمكنني مساعدتك اليوم؟
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-input" class="form-control chat-input"
+          placeholder="اكتب سؤالك هنا..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChat();}">
+        <button class="btn btn-primary" onclick="sendChat()" id="send-btn">إرسال</button>
+      </div>
+    </div>
+
+    <!-- منطقة المحتوى الديناميكي -->
+    <div id="dynamic-content" style="margin-top:1.25rem"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chatHistory = [];
+const messagesEl = document.getElementById('chat-messages');
+
+function scrollChat() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+function addMessage(text, role) {
+  const div = document.createElement('div');
+  div.className = `chat-bubble ${role} fade-in`;
+  div.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  messagesEl.appendChild(div);
+  scrollChat();
+}
+
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'chat-bubble bot typing'; div.id = 'typing-indicator';
+  div.innerHTML = '<span style="animation:pulse 1s infinite">المساعد يكتب...</span>';
+  messagesEl.appendChild(div);
+  scrollChat();
+  return div;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const sendBtn = document.getElementById('send-btn');
+  sendBtn.disabled = true;
+
+  addMessage(msg, 'user');
+  chatHistory.push({ role: 'user', content: msg });
+  const typing = addTyping();
+
+  const res = await fetch('/ai/chat', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ message: msg, history: chatHistory })
+  });
+  const data = await res.json();
+  typing.remove();
+
+  const reply = data.response || 'عذراً، حدث خطأ. حاول مرة أخرى.';
+  chatHistory.push({ role: 'model', content: reply });
+  addMessage(reply, 'bot');
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+function clearChat() {
+  chatHistory.length = 0;
+  messagesEl.innerHTML = `<div class="chat-bubble bot">تم مسح المحادثة. كيف يمكنني مساعدتك؟ 😊</div>`;
+}
+
+async function loadStudyPlan(resultId) {
+  const el = document.getElementById('dynamic-content');
+  el.innerHTML = '<div class="card"><div class="skeleton" style="height:400px"></div></div>';
+
+  const res = await fetch(`/ai/study-plan/${resultId}`);
+  const data = await res.json();
+
+  el.innerHTML = `
+    <div class="card fade-in">
+      <div class="card-title">📚 خطتك الدراسية المخصصة</div>
+      <div class="markdown-content" id="plan-content"></div>
+    </div>`;
+  renderMarkdown(data.study_plan, 'plan-content');
+}
+
+async function generatePractice() {
+  const topic = document.getElementById('practice-topic').value.trim();
+  if (!topic) { showToast('أدخل موضوع الأسئلة التدريبية', 'error'); return; }
+  const count = parseInt(document.getElementById('practice-count').value);
+  const btnText = document.getElementById('practice-btn-text');
+  const loader = document.getElementById('practice-loader');
+  btnText.style.display = 'none'; loader.style.display = 'inline-block';
+
+  const res = await fetch('/ai/practice-exam', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ topic, num_questions: count })
+  });
+  const data = await res.json();
+
+  btnText.style.display = 'inline'; loader.style.display = 'none';
+
+  const el = document.getElementById('dynamic-content');
+  el.innerHTML = `
+    <div class="card fade-in">
+      <div class="card-title">🎯 أسئلة تدريبية — ${topic}</div>
+      <div class="markdown-content" id="practice-content"></div>
+    </div>`;
+  renderMarkdown(data.questions, 'practice-content');
+}
+
+function renderMarkdown(text, targetId) {
+  const el = document.getElementById(targetId);
+  let html = text
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+  el.innerHTML = `<p>${html}</p>`;
+}
+</script>
+{% endblock %}

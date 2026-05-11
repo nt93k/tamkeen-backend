@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إنشاء حساب | تمكين</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="auth-wrapper" style="padding:3rem 1rem">
+  <div class="auth-card fade-in" style="max-width:620px">
+    <div class="auth-logo">
+      <h1>تمكين ✦</h1>
+      <p>انضم إلى منصة تمكين اليوم</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-student" onclick="switchTab('student')">🎓 طالب</button>
+      <button class="auth-tab" id="tab-company" onclick="switchTab('company')">🏢 شركة</button>
+    </div>
+
+    <div id="alert-box"></div>
+
+    <!-- نموذج تسجيل الطالب -->
+    <form id="student-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">الاسم الكامل</label>
+          <input type="text" name="full_name" class="form-control" placeholder="أحمد محمد علي" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">البريد الإلكتروني</label>
+          <input type="email" name="email" class="form-control" placeholder="ahmed@uob.edu.iq" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">كلمة المرور</label>
+          <input type="password" name="password" class="form-control" placeholder="8 أحرف على الأقل" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">الجامعة</label>
+          <input type="text" name="university" class="form-control" placeholder="جامعة بغداد" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">التخصص</label>
+          <select name="major" class="form-control" required>
+            <option value="">اختر التخصص</option>
+            <option>علوم الحاسوب</option>
+            <option>هندسة البرمجيات</option>
+            <option>هندسة الشبكات</option>
+            <option>نظم المعلومات</option>
+            <option>الهندسة الكهربائية</option>
+            <option>الهندسة المدنية</option>
+            <option>الهندسة الميكانيكية</option>
+            <option>الطب البشري</option>
+            <option>إدارة الأعمال</option>
+            <option>المحاسبة</option>
+            <option>الاقتصاد</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">السنة الدراسية</label>
+          <select name="academic_year" class="form-control" required>
+            <option value="">اختر السنة</option>
+            <option value="1">السنة الأولى</option>
+            <option value="2">السنة الثانية</option>
+            <option value="3">السنة الثالثة</option>
+            <option value="4">السنة الرابعة</option>
+            <option value="5">السنة الخامسة</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">المحافظة</label>
+          <select name="province" class="form-control" required>
+            <option value="">اختر المحافظة</option>
+            <option>بغداد</option><option>البصرة</option><option>نينوى</option>
+            <option>أربيل</option><option>السليمانية</option><option>دهوك</option>
+            <option>كركوك</option><option>الأنبار</option><option>ديالى</option>
+            <option>بابل</option><option>كربلاء</option><option>النجف</option>
+            <option>واسط</option><option>ميسان</option><option>ذي قار</option>
+            <option>المثنى</option><option>القادسية</option><option>صلاح الدين</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">المعدل التراكمي (اختياري)</label>
+          <input type="number" name="gpa" class="form-control" placeholder="3.5" min="0" max="4" step="0.01">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">
+        <span class="btn-text">إنشاء حساب الطالب</span>
+        <span class="loader" style="display:none"></span>
+      </button>
+    </form>
+
+    <!-- نموذج تسجيل الشركة -->
+    <form id="company-form" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">اسم الشركة</label>
+          <input type="text" name="company_name" class="form-control" placeholder="شركة الرافدين للتقنية" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">البريد الإلكتروني الرسمي</label>
+          <input type="email" name="email" class="form-control" placeholder="hr@company.com" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">كلمة المرور</label>
+          <input type="password" name="password" class="form-control" placeholder="8 أحرف على الأقل" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">قطاع الأعمال</label>
+          <select name="industry" class="form-control" required>
+            <option value="">اختر القطاع</option>
+            <option>تكنولوجيا المعلومات</option>
+            <option>الاتصالات</option>
+            <option>النفط والطاقة</option>
+            <option>البناء والإنشاءات</option>
+            <option>الخدمات المالية</option>
+            <option>الرعاية الصحية</option>
+            <option>التعليم</option>
+            <option>التجارة والتوزيع</option>
+            <option>الصناعة التحويلية</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">المحافظة</label>
+          <select name="province" class="form-control" required>
+            <option value="">اختر المحافظة</option>
+            <option>بغداد</option><option>البصرة</option><option>نينوى</option>
+            <option>أربيل</option><option>السليمانية</option><option>دهوك</option>
+            <option>كركوك</option><option>الأنبار</option><option>ديالى</option>
+            <option>بابل</option><option>كربلاء</option><option>النجف</option>
+            <option>واسط</option><option>ميسان</option><option>ذي قار</option>
+            <option>المثنى</option><option>القادسية</option><option>صلاح الدين</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">الموقع الإلكتروني (اختياري)</label>
+          <input type="url" name="website" class="form-control" placeholder="https://company.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">نبذة عن الشركة</label>
+        <textarea name="description" class="form-control" rows="3" placeholder="اكتب نبذة مختصرة عن شركتك..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">
+        <span class="btn-text">إنشاء حساب الشركة</span>
+        <span class="loader" style="display:none"></span>
+      </button>
+    </form>
+
+    <div class="auth-link">لديك حساب بالفعل؟ <a href="/auth/login">تسجيل الدخول</a></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/main.js"></script>
+<script>
+let activeTab = 'student';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-student').classList.toggle('active', tab === 'student');
+  document.getElementById('tab-company').classList.toggle('active', tab === 'company');
+  document.getElementById('student-form').style.display = tab === 'student' ? 'block' : 'none';
+  document.getElementById('company-form').style.display = tab === 'company' ? 'block' : 'none';
+}
+
+async function handleSubmit(form, endpoint) {
+  const btn = form.querySelector('button[type="submit"]');
+  const btnText = btn.querySelector('.btn-text');
+  const loader = btn.querySelector('.loader');
+  btn.disabled = true; if(btnText) btnText.style.display='none'; if(loader) loader.style.display='inline-block';
+
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+  if(data.academic_year) data.academic_year = parseInt(data.academic_year);
+  if(data.gpa && data.gpa !== '') data.gpa = parseFloat(data.gpa); else delete data.gpa;
+
+  const res = await fetch(endpoint, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+
+  btn.disabled = false; if(btnText) btnText.style.display='inline'; if(loader) loader.style.display='none';
+
+  const box = document.getElementById('alert-box');
+  if (res.ok) {
+    box.innerHTML = `<div class="alert alert-success" style="margin-bottom:1rem">✅ ${result.message}</div>`;
+    showToast('تم التسجيل بنجاح!', 'success');
+    setTimeout(() => window.location.href = result.redirect, 1200);
+  } else {
+    const msg = result.detail?.map ? result.detail.map(e => e.msg).join('<br>') : result.detail;
+    box.innerHTML = `<div class="alert alert-danger" style="margin-bottom:1rem">⚠️ ${msg}</div>`;
+  }
+}
+
+document.getElementById('student-form').addEventListener('submit', e => { e.preventDefault(); handleSubmit(e.target, '/auth/register/student'); });
+document.getElementById('company-form').addEventListener('submit', e => { e.preventDefault(); handleSubmit(e.target, '/auth/register/company'); });
+</script>
+</body>
+</html>

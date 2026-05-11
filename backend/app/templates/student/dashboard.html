@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}لوحة الطالب{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>مرحباً، {{ profile.full_name }} 👋</h2>
+  <p>{{ profile.major }} — {{ profile.university }} — {{ profile.province }}</p>
+</div>
+
+<!-- إحصائيات -->
+<div class="card-grid" style="margin-bottom:2rem">
+  <div class="stat-card">
+    <div class="stat-icon purple">🎓</div>
+    <div>
+      <div class="stat-value">السنة {{ profile.academic_year }}</div>
+      <div class="stat-label">السنة الدراسية</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon {% if latest_result and latest_result.passed %}green{% elif latest_result %}amber{% else %}cyan{% endif %}">
+      {% if latest_result %}📊{% else %}📝{% endif %}
+    </div>
+    <div>
+      <div class="stat-value">
+        {% if latest_result %}{{ latest_result.score|round(1) }}%{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">
+        {% if latest_result %}
+          {% if latest_result.passed %}✅ ناجح{% else %}❌ راسب{% endif %}
+        {% else %}لم يُجرَ الاختبار{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon amber">💼</div>
+    <div>
+      <div class="stat-value">{{ available_jobs|length }}</div>
+      <div class="stat-label">وظيفة متاحة لتخصصك</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon cyan">📍</div>
+    <div>
+      <div class="stat-value" style="font-size:1.1rem">{{ profile.province }}</div>
+      <div class="stat-label">محافظتك</div>
+    </div>
+  </div>
+</div>
+
+<!-- حالة الاختبار -->
+{% if not latest_result %}
+<div class="card" style="margin-bottom:2rem;border-color:rgba(108,99,255,0.4);background:rgba(108,99,255,0.07)">
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span style="font-size:2.5rem">📋</span>
+    <div style="flex:1">
+      <h3 style="margin-bottom:0.35rem">أكمل اختبار التأهيل</h3>
+      <p style="color:var(--text-secondary);font-size:0.9rem">يجب إجراء اختبار التأهيل للتقدم على الوظائف والوصول إلى المساعد الذكي.</p>
+    </div>
+    <a href="/student/exam" class="btn btn-primary">ابدأ الاختبار</a>
+  </div>
+</div>
+{% elif not latest_result.passed %}
+<div class="card" style="margin-bottom:2rem;border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.07)">
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span style="font-size:2.5rem">🤖</span>
+    <div style="flex:1">
+      <h3 style="margin-bottom:0.35rem">خطتك الدراسية جاهزة!</h3>
+      <p style="color:var(--text-secondary);font-size:0.9rem">أعدّ المساعد الذكي خطة دراسية مخصصة لمساعدتك على النجاح في الاختبار القادم.</p>
+    </div>
+    <div style="display:flex;gap:0.75rem">
+      <a href="/ai/tutor" class="btn btn-primary">المساعد الذكي</a>
+      <a href="/student/exam" class="btn btn-secondary">إعادة الاختبار</a>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:2rem;border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.07)">
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span style="font-size:2.5rem">🎉</span>
+    <div style="flex:1">
+      <h3 style="margin-bottom:0.35rem">أحسنت! أنت مؤهل للتقدم على الوظائف</h3>
+      <p style="color:var(--text-secondary);font-size:0.9rem">حصلت على {{ latest_result.score|round(1) }}% في اختبار التأهيل. يمكنك الآن الاطلاع على الوظائف المتاحة.</p>
+    </div>
+    <a href="/student/jobs" class="btn btn-success">عرض الوظائف</a>
+  </div>
+</div>
+{% endif %}
+
+<!-- الوظائف المتاحة -->
+{% if available_jobs %}
+<div class="section-title">الوظائف المتاحة لتخصصك</div>
+<div class="card-grid">
+  {% for job in available_jobs %}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem">
+      <span class="badge badge-primary">{{ job.employment_type }}</span>
+      <span style="color:var(--text-muted);font-size:0.8rem">{{ job.province }}</span>
+    </div>
+    <h4 style="margin-bottom:0.35rem;font-size:1rem">{{ job.title }}</h4>
+    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem">{{ job.department }}</p>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:0.8rem;color:var(--text-muted)">الحد الأدنى: {{ job.min_exam_score }}%</span>
+      {% if latest_result and latest_result.score >= job.min_exam_score %}
+        <span class="badge badge-success">✅ مؤهل</span>
+      {% else %}
+        <span class="badge badge-danger">غير مؤهل بعد</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

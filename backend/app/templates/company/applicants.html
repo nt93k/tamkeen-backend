@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}المتقدمون للوظيفة{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <h2>👥 المتقدمون المؤهلون</h2>
+      <p>{{ job.title }} — {{ job.department }} — {{ job.province }}</p>
+    </div>
+    <a href="/company/dashboard" class="btn btn-secondary">← العودة</a>
+  </div>
+</div>
+
+<!-- تفاصيل الوظيفة -->
+<div class="card" style="margin-bottom:2rem;background:rgba(108,99,255,0.06);border-color:rgba(108,99,255,0.25)">
+  <div style="display:flex;gap:2rem;flex-wrap:wrap">
+    <div><span style="color:var(--text-muted);font-size:0.8rem">التخصص المطلوب</span><br><strong>{{ job.required_major }}</strong></div>
+    <div><span style="color:var(--text-muted);font-size:0.8rem">الحد الأدنى للدرجة</span><br><strong>{{ job.min_exam_score }}%</strong></div>
+    <div><span style="color:var(--text-muted);font-size:0.8rem">نوع التوظيف</span><br><strong>{{ job.employment_type }}</strong></div>
+    <div><span style="color:var(--text-muted);font-size:0.8rem">المحافظة</span><br><strong>{{ job.province }}</strong></div>
+  </div>
+</div>
+
+{% if applicants %}
+<div class="section-title">{{ applicants|length }} طالب مؤهل</div>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>اسم الطالب</th>
+          <th>الجامعة</th>
+          <th>التخصص</th>
+          <th>السنة</th>
+          <th>المحافظة</th>
+          <th>درجة الاختبار</th>
+          <th>المعدل</th>
+          <th>التواصل</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for result in applicants %}
+        <tr>
+          <td style="font-weight:600">{{ result.student.full_name }}</td>
+          <td>{{ result.student.university }}</td>
+          <td><span class="badge badge-primary">{{ result.student.major }}</span></td>
+          <td>السنة {{ result.student.academic_year }}</td>
+          <td>{{ result.student.province }}</td>
+          <td>
+            <span style="color:var(--success);font-weight:700">{{ result.score|round(1) }}%</span>
+            <div class="progress" style="width:80px;margin-top:4px">
+              <div class="progress-bar" style="width:{{ result.score }}%"></div>
+            </div>
+          </td>
+          <td>{{ result.student.gpa or '—' }}</td>
+          <td>
+            <a href="mailto:{{ result.student.user.email }}" class="btn btn-secondary btn-sm">مراسلة</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="icon">🔍</div>
+  <h3>لا يوجد متقدمون مؤهلون بعد</h3>
+  <p>لا يوجد طلاب يستوفون متطلبات هذه الوظيفة حتى الآن. جرب تخفيض الحد الأدنى للدرجة.</p>
+  <a href="/company/dashboard" class="btn btn-secondary" style="margin-top:1rem">العودة للوحة التحكم</a>
+</div>
+{% endif %}
+{% endblock %}

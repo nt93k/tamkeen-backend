@@ -29,3 +29,5 @@ dnspython
 resend
 pydantic[email]
 starlette
+google-generativeai
+pydantic-settings

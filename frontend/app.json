@@ -43,11 +43,21 @@
     "experiments": {
       "typedRoutes": true
     },
+    "sdkVersion": "54.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "androidStatusBar": {
+      "backgroundColor": "#C8E4D9"
+    },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "56a90533-a857-4724-b47c-5a765a19afd2"
+        "projectId": "7834226c-e5e2-4fd6-8ae1-2f2c1fe53e3a"
       }
-    }
+    },
+    "owner": "smart-hurizon"
   }
 }

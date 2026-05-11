@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}اختبار التأهيل{% endblock %}
+
+{% block content %}
+{% if not exam %}
+<div class="empty-state">
+  <div class="icon">📋</div>
+  <h3>لا يوجد اختبار متاح</h3>
+  <p>{{ message }}</p>
+  <a href="/student/dashboard" class="btn btn-primary" style="margin-top:1rem">العودة للرئيسية</a>
+</div>
+{% else %}
+
+<!-- شريط التقدم -->
+<div style="margin-bottom:2rem">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+    <div>
+      <h2 style="font-size:1.3rem;font-weight:800">{{ exam.title }}</h2>
+      <p style="color:var(--text-secondary);font-size:0.9rem">{{ exam.questions|length }} سؤال — {{ exam.time_limit_minutes }} دقيقة</p>
+    </div>
+    <div style="text-align:center">
+      <div id="timer" style="font-size:1.6rem;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums">
+        {{ "%02d"|format(exam.time_limit_minutes) }}:00
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">الوقت المتبقي</div>
+    </div>
+  </div>
+  <div class="progress">
+    <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:0.4rem">
+    <span style="font-size:0.8rem;color:var(--text-muted)">تم الإجابة: <span id="answered-count">0</span> / {{ exam.questions|length }}</span>
+    <span style="font-size:0.8rem;color:var(--text-muted)">الحد الأدنى للنجاح: {{ exam.pass_threshold }}%</span>
+  </div>
+</div>
+
+<!-- الأسئلة -->
+<form id="exam-form">
+  <input type="hidden" id="exam-id" value="{{ exam.id }}">
+  {% for q in exam.questions|sort(attribute='order_num') %}
+  <div class="question-card" id="q-{{ loop.index }}">
+    <div class="question-number">السؤال {{ loop.index }} من {{ exam.questions|length }} • {{ q.topic }} • {{ q.difficulty }}</div>
+    <div class="question-text">{{ q.question_text }}</div>
+    <div class="options-list">
+      {% for opt, label in [('a','أ'), ('b','ب'), ('c','ج'), ('d','د')] %}
+      <label class="option-label" data-qid="{{ q.id }}" data-opt="{{ opt }}" onclick="selectOption(this)">
+        <input type="radio" name="q_{{ q.id }}" value="{{ opt }}">
+        <div class="option-key">{{ label }}</div>
+        <span>{{ q['option_' + opt] }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- زر التسليم -->
+  <div style="display:flex;justify-content:center;margin:2rem 0">
+    <button type="button" class="btn btn-primary btn-lg" id="submit-btn" onclick="submitExam()" disabled>
+      <span id="submit-text">أكمل الإجابة على جميع الأسئلة أولاً</span>
+      <span class="loader" id="submit-loader" style="display:none"></span>
+    </button>
+  </div>
+</form>
+
+<!-- نافذة النتيجة -->
+<div id="result-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;display:none;align-items:center;justify-content:center;padding:1rem">
+  <div class="card fade-in" style="max-width:500px;width:100%;text-align:center">
+    <div id="score-circle-wrap"></div>
+    <h3 id="result-title" style="font-size:1.4rem;margin-bottom:0.5rem"></h3>
+    <p id="result-msg" style="color:var(--text-secondary);margin-bottom:1.5rem"></p>
+    <div id="result-actions" style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap"></div>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const totalQ = {{ exam.questions|length if exam else 0 }};
+const answers = {};
+let timeLeft = {{ exam.time_limit_minutes * 60 if exam else 0 }};
+
+function selectOption(el) {
+  const qid = el.dataset.qid;
+  const opt = el.dataset.opt;
+  document.querySelectorAll(`[data-qid="${qid}"]`).forEach(l => l.classList.remove('selected'));
+  el.classList.add('selected');
+  answers[qid] = opt;
+  updateProgress();
+}
+
+function updateProgress() {
+  const count = Object.keys(answers).length;
+  document.getElementById('answered-count').textContent = count;
+  document.getElementById('progress-bar').style.width = (count / totalQ * 100) + '%';
+  const btn = document.getElementById('submit-btn');
+  if (count === totalQ) {
+    btn.disabled = false;
+    document.getElementById('submit-text').textContent = 'تسليم الاختبار';
+  }
+}
+
+// Timer
+const timerEl = document.getElementById('timer');
+const interval = setInterval(() => {
+  if (timeLeft <= 0) { clearInterval(interval); submitExam(); return; }
+  timeLeft--;
+  const m = Math.floor(timeLeft / 60).toString().padStart(2,'0');
+  const s = (timeLeft % 60).toString().padStart(2,'0');
+  timerEl.textContent = `${m}:${s}`;
+  if (timeLeft < 120) timerEl.style.color = 'var(--danger)';
+}, 1000);
+
+async function submitExam() {
+  clearInterval(interval);
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  document.getElementById('submit-text').style.display = 'none';
+  document.getElementById('submit-loader').style.display = 'inline-block';
+
+  const res = await fetch('/student/exam/submit', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ exam_id: document.getElementById('exam-id').value, answers })
+  });
+  const data = await res.json();
+
+  // عرض النتيجة
+  const modal = document.getElementById('result-modal');
+  modal.style.display = 'flex';
+  const circleClass = data.passed ? 'passed' : 'failed';
+  document.getElementById('score-circle-wrap').innerHTML = `
+    <div class="score-circle ${circleClass}" style="margin-bottom:1.25rem">
+      <div class="score-number">${data.score.toFixed(1)}%</div>
+      <div class="score-label">${data.passed ? '✅ ناجح' : '❌ راسب'}</div>
+    </div>`;
+  document.getElementById('result-title').textContent = data.passed ? 'مبروك! اجتزت الاختبار' : 'لم تتجاوز الحد المطلوب';
+  document.getElementById('result-msg').textContent = data.passed
+    ? `أجبت بشكل صحيح على ${data.correct} من ${data.total} سؤال.`
+    : `أجبت بشكل صحيح على ${data.correct} من ${data.total}. الحد الأدنى: ${data.pass_threshold}%.`;
+
+  const actions = document.getElementById('result-actions');
+  if (data.passed) {
+    actions.innerHTML = `<a href="/student/dashboard" class="btn btn-success">عرض الوظائف المتاحة</a>`;
+  } else {
+    actions.innerHTML = `
+      <a href="/ai/tutor" class="btn btn-primary">📚 خطتي الدراسية</a>
+      <a href="/student/exam" class="btn btn-secondary">إعادة المحاولة</a>`;
+  }
+}
+</script>
+{% endblock %}

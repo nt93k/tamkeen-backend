@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}لوحة الشركة{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <h2>{{ profile.company_name }} 🏢</h2>
+      <p>{{ profile.industry }} — {{ profile.province }}</p>
+    </div>
+    <a href="/company/jobs/new" class="btn btn-primary">+ نشر وظيفة جديدة</a>
+  </div>
+</div>
+
+<!-- الإحصائيات -->
+<div class="card-grid" style="margin-bottom:2rem">
+  <div class="stat-card">
+    <div class="stat-icon purple">📋</div>
+    <div>
+      <div class="stat-value">{{ jobs|length }}</div>
+      <div class="stat-label">إجمالي الإعلانات</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green">✅</div>
+    <div>
+      <div class="stat-value">{{ active_jobs }}</div>
+      <div class="stat-label">إعلانات نشطة</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon amber">📍</div>
+    <div>
+      <div class="stat-value" style="font-size:1.1rem">{{ profile.province }}</div>
+      <div class="stat-label">موقع الشركة</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon cyan">🏭</div>
+    <div>
+      <div class="stat-value" style="font-size:0.95rem">{{ profile.industry }}</div>
+      <div class="stat-label">القطاع</div>
+    </div>
+  </div>
+</div>
+
+<!-- جدول الوظائف -->
+<div class="section-title">إعلاناتك الوظيفية</div>
+{% if jobs %}
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>المسمى الوظيفي</th>
+          <th>القسم</th>
+          <th>التخصص المطلوب</th>
+          <th>المحافظة</th>
+          <th>الحد الأدنى</th>
+          <th>نوع التوظيف</th>
+          <th>الحالة</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td style="font-weight:600">{{ job.title }}</td>
+          <td>{{ job.department }}</td>
+          <td><span class="badge badge-primary">{{ job.required_major }}</span></td>
+          <td>{{ job.province }}</td>
+          <td>{{ job.min_exam_score }}%</td>
+          <td>{{ job.employment_type }}</td>
+          <td>
+            {% if job.is_active %}
+              <span class="badge badge-success">نشط</span>
+            {% else %}
+              <span class="badge badge-danger">مغلق</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:0.5rem">
+              <a href="/company/jobs/{{ job.id }}/applicants" class="btn btn-secondary btn-sm">المتقدمون</a>
+              <button class="btn btn-danger btn-sm" onclick="deleteJob('{{ job.id }}')">حذف</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="icon">📋</div>
+  <h3>لا توجد إعلانات وظيفية بعد</h3>
+  <p>ابدأ بنشر أول إعلان وظيفي لجذب الطلاب المؤهلين</p>
+  <a href="/company/jobs/new" class="btn btn-primary" style="margin-top:1rem">نشر وظيفة الآن</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function deleteJob(jobId) {
+  if (!confirm('هل أنت متأكد من حذف هذا الإعلان؟')) return;
+  const res = await fetch(`/company/jobs/${jobId}`, { method: 'DELETE' });
+  if (res.ok) { showToast('تم حذف الإعلان بنجاح', 'success'); setTimeout(() => location.reload(), 800); }
+  else showToast('حدث خطأ أثناء الحذف', 'error');
+}
+</script>
+{% endblock %}
