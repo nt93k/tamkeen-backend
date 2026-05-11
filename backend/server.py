@@ -28,7 +28,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 #from app.routers import ai_tutor
-from app.routers import auth, student, company, ai_tutor
+#from app.routers import auth, student, company, ai_tutor
 #from emergentintegrations.llm.chat import LlmChat, UserMessage
 MONGO_URL = os.environ.get("MONGO_URL")
 # ============ DB ============
