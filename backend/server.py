@@ -27,7 +27,8 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Header
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
-
+#from app.routers import ai_tutor
+from app.routers import auth, student, company, ai_tutor
 #from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 # ============ DB ============
@@ -40,8 +41,9 @@ db = client.get_database("tamkeen_db") # تأكد أن هذا السطر موج�
 JWT_SECRET = os.getenv("JWT_SECRET", "fallback_secret_for_local_testing")
 JWT_ALG = os.getenv("JWT_ALG", "HS256")
 #EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
-GEMINI_MODEL = "gemini-3.1-pro-preview"
-
+#GEMINI_MODEL = "gemini-3.1-pro-preview"
+GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 APP_NAME = os.environ.get('APP_NAME', 'Tamkeen')
@@ -568,39 +570,39 @@ async def ai_chat(payload: ChatIn, user: dict = Depends(get_current_user)):
             "أنت 'مرشد تمكين'، مساعد دراسي ذكي يساعد الطلاب العرب في تخصصات الحاسوب والمحاسبة والذكاء الاصطناعي. "
             "أجب باللغة العربية بأسلوب ودود وواضح، مع أمثلة عملية مختصرة عند الحاجة."
         )
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=payload.session_id,
-        system_message=sys_msg,
-    ).with_model("gemini", GEMINI_MODEL)
+   # chat = LlmChat(
+     #   api_key=EMERGENT_LLM_KEY,
+      #  session_id=payload.session_id,
+     #  system_message=sys_msg,
+   # ).with_model("gemini", GEMINI_MODEL)
     # restore history
-    history = await db.chat_messages.find(
-        {"session_id": payload.session_id, "user_id": user["user_id"]},
-        {"_id": 0},
-    ).sort("created_at", 1).to_list(length=50)
+   # history = await db.chat_messages.find(
+       # {"session_id": payload.session_id, "user_id": user["user_id"]},
+      #  {"_id": 0},
+    #).sort("created_at", 1).to_list(length=50)
     # store user msg
-    await db.chat_messages.insert_one({
-        "session_id": payload.session_id,
-        "user_id": user["user_id"],
-        "role": "user",
-        "content": payload.message,
-        "mode": payload.mode,
-        "created_at": datetime.now(timezone.utc),
-    })
-    try:
-        reply = await chat.send_message(UserMessage(text=payload.message))
-    except Exception as e:
-        logging.exception("AI chat error")
-        raise HTTPException(500, f"خطأ في المساعد الذكي: {str(e)[:120]}")
-    await db.chat_messages.insert_one({
-        "session_id": payload.session_id,
-        "user_id": user["user_id"],
-        "role": "assistant",
-        "content": reply,
-        "mode": payload.mode,
-        "created_at": datetime.now(timezone.utc),
-    })
-    return {"reply": reply}
+    #await db.chat_messages.insert_one({
+       # "session_id": payload.session_id,
+        #"user_id": user["user_id"],
+       # "role": "user",
+        #"content": payload.message,
+       # "mode": payload.mode,
+      #  "created_at": datetime.now(timezone.utc),
+   # })
+   # try:
+     #   reply = await chat.send_message(UserMessage(text=payload.message))
+   # except Exception as e:
+       # logging.exception("AI chat error")
+        #raise HTTPException(500, f"خطأ في المساعد الذكي: {str(e)[:120]}")
+   # await db.chat_messages.insert_one({
+       # "session_id": payload.session_id,
+        #"user_id": user["user_id"],
+       # "role": "assistant",
+       # "content": reply,
+      #  "mode": payload.mode,
+       # "created_at": datetime.now(timezone.utc),
+   # })
+    #return {"reply": reply}
 
 @api.get("/ai/history")
 async def ai_history(session_id: str, user: dict = Depends(get_current_user)):

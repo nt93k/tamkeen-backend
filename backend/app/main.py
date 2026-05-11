@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-
+#from app.routers import auth, student, company, ai_tutor
 from app.config import settings
 from app.database import create_tables
 from app.routers import auth, student, company, ai_tutor
