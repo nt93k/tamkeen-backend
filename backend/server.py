@@ -1,6 +1,7 @@
 import sys
 #import os
 import os
+#import google.generativeai as genai
 os.environ["EMERGENT_LLM_KEY"] = "dummy"
 os.environ["OPENAI_API_KEY"] = "dummy"
 # هذا السطر يخبر السيرفر أن ينظر للمجلد الرئيسي بحثاً عن المكتبات
