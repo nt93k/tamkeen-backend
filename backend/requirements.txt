@@ -31,3 +31,4 @@ pydantic[email]
 starlette
 google-generativeai
 pydantic-settings
+sqlalchemy>=2.0.0
