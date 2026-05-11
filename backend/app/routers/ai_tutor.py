@@ -23,18 +23,25 @@ async def ai_tutor_page(request: Request, current_user: User = Depends(get_curre
         context={"current_user": current_user}
     )
 @router.post("/chat")
-async def chat_with_ai(message: dict):
-    # أخذ النص من الرسالة القادمة من التطبيق
-    user_text = message.get("text", message.get("message", ""))
-    
-    # طلب الرد من جيميناي
-    response = await ai_service.get_chat_response(
-        "General Student", # تخصص افتراضي لأننا عطلنا الـ SQL
-        user_text
-    )
-    
-    # إرجاع الرد بنفس الصيغة التي يتوقعها التطبيق
-    return {"response": response}
+async def chat_with_ai(request: Request):
+    try:
+        # 1. الحصول على البيانات الخام من الطلب
+        data = await request.json()
+        user_text = data.get("text") or data.get("message") or data.get("content") or ""
+        
+        # 2. استدعاء الخدمة (بدون المرور بنظام الحماية المعطل)
+        response = await ai_service.get_chat_response("General", user_text)
+        
+        # 3. إرجاع النتيجة بكل الصيغ المحتملة لضمان عدم انهيار التطبيق
+        return {
+            "response": response,
+            "reply": response,
+            "message": response,
+            "status": "success"
+        }
+    except Exception as e:
+        print(f"Error in AI Chat: {e}")
+        return {"response": "عذراً، حدث خطأ بسيط. حاول مرة أخرى.", "status": "error"}
 #@router.post("/chat")
 #async def chat_with_ai(message: dict, current_user: User = Depends(get_current_student)):
     #response = await ai_service.get_chat_response(
