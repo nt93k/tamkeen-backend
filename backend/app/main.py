@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 #from app.routers import auth, student, company, ai_tutor
 from app.config import settings
 from app.database import create_tables
-#from app.routers import auth, student, company, ai_tutor
+from app.routers import  ai_tutor
 from app.routers.deps import get_optional_user
 
 app = FastAPI(
