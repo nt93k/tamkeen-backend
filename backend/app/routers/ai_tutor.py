@@ -3,8 +3,8 @@ from app.services import ai_service
 
 # لا نضع /api هنا لأن الملف الأساسي server.py هو من يضيفها
 # نكتفي بـ /ai ليكون المسار النهائي /api/ai/chat
-router = APIRouter(prefix="/ai", tags=["ai-tutor"])
-
+#router = APIRouter(prefix="/ai", tags=["ai-tutor"])
+router = APIRouter(tags=["ai-tutor"]) # حذفنا الـ prefix من هنا
 @router.post("/chat")
 async def chat_with_ai(request: Request):
     try:
