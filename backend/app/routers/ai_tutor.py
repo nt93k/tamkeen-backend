@@ -1,23 +1,29 @@
+from fastapi import APIRouter, Request
+from app.services import ai_service
+
+# يجب تعريف الـ router أولاً قبل استخدامه
+router = APIRouter(prefix="/ai", tags=["ai-tutor"])
+
 @router.post("/chat")
 async def chat_with_ai(request: Request):
     try:
         data = await request.json()
         user_text = data.get("text") or data.get("message") or ""
         
-        # استدعاء جيميناي
-        response_text = await ai_service.get_chat_response("General", user_text)
+        response_text = await ai_service.get_chat_response("General Student", user_text)
         
-        # إرجاع الرد بصيغ متعددة (قاموس، نص، وقائمة)
-        # هذا يمنع الـ Frontend من الانهيار مهما كان المفتاح الذي يبحث عنه
+        # نرسل كل المفاتيح المحتملة ليرضى الـ Frontend
         return {
-            "response": response_text,       # الاحتمال 1
-            "reply": response_text,          # الاحتمال 2
-            "message": response_text,        # الاحتمال 3
-            "content": response_text,        # الاحتمال 4
-            "text": response_text,           # الاحتمال 5
+            "response": response_text,
+            "reply": response_text,
+            "message": response_text,
+            "content": response_text,
             "status": "success",
-            "data": {"reply": response_text} # بعض التطبيقات تبحث داخل كلمة data
+            "data": {"reply": response_text}
         }
     except Exception as e:
-        print(f"Chat Error: {e}")
-        return {"response": "أنا معك، اسألني أي شيء!"}
+        return {"response": "أنا متاح لمساعدتك!", "status": "error"}
+
+@router.get("/chat")
+async def test_endpoint():
+    return {"status": "AI Router is working!"}
