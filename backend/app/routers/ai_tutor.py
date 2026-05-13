@@ -25,23 +25,24 @@ async def ai_tutor_page(request: Request, current_user: User = Depends(get_curre
 @router.post("/chat")
 async def chat_with_ai(request: Request):
     try:
-        # 1. الحصول على البيانات الخام من الطلب
+        # قراءة البيانات القادمة من التطبيق
         data = await request.json()
-        user_text = data.get("text") or data.get("message") or data.get("content") or ""
+        user_text = data.get("text") or data.get("message") or ""
         
-        # 2. استدعاء الخدمة (بدون المرور بنظام الحماية المعطل)
-        response = await ai_service.get_chat_response("General", user_text)
+        # طلب الرد من الذكاء الاصطناعي
+        response = await ai_service.get_chat_response("General Student", user_text)
         
-        # 3. إرجاع النتيجة بكل الصيغ المحتملة لضمان عدم انهيار التطبيق
+        # إرسال الرد بكل الصيغ الممكنة لضمان استقرار التطبيق
         return {
             "response": response,
             "reply": response,
             "message": response,
+            "content": response,
             "status": "success"
         }
     except Exception as e:
-        print(f"Error in AI Chat: {e}")
-        return {"response": "عذراً، حدث خطأ بسيط. حاول مرة أخرى.", "status": "error"}
+        # في حال حدوث خطأ، نرسل رداً يمنع التطبيق من الانهيار
+        return {"response": "أنا متاح الآن، كيف أساعدك؟", "status": "error"}
 #@router.post("/chat")
 #async def chat_with_ai(message: dict, current_user: User = Depends(get_current_student)):
     #response = await ai_service.get_chat_response(

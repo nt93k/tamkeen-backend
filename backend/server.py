@@ -934,7 +934,6 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-# في نهاية ملف server.py
 if __name__ == "__main__":
     import uvicorn
     import os
