@@ -6,18 +6,17 @@ router = APIRouter(tags=["ai-tutor"])
 @router.post("/ai/chat")
 async def chat_with_ai(request: Request):
     try:
-        # قراءة البيانات المرسلة
         data = await request.json()
-        user_text = data.get("message") or data.get("text") or ""
+        # التطبيق يرسل النص بكلمة 'message' حسب كود Mentor.tsx
+        user_text = data.get("message", "") 
         
-        # استدعاء الذكاء الاصطناعي
         response_text = await ai_service.get_chat_response("General Student", user_text)
         
-        # الرد بالصيغة التي ينتظرها ملف Mentor.tsx بالضبط
+        # الرد "يجب" أن يكون بمفتاح 'reply' حصراً
         return {
-            "reply": response_text  # هذا هو المفتاح السحري المطلوب
+            "reply": response_text
         }
-        
     except Exception as e:
         print(f"Error: {e}")
-        return {"reply": "عذراً، حدث خطأ بسيط. أنا معك الآن، تفضل بسؤالك."}
+        # حتى في الخطأ نرسل 'reply' عشان ما يوقع التطبيق
+        return {"reply": "حصل خطأ في معالجة الرد، حاول مرة ثانية."}
