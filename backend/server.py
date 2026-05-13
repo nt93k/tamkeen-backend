@@ -28,6 +28,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 from app.routers import ai_tutor
+app = FastAPI()
 #from app.routers import auth, student, company, ai_tutor
 #from emergentintegrations.llm.chat import LlmChat, UserMessage
 MONGO_URL = os.environ.get("MONGO_URL")
@@ -920,6 +921,7 @@ async def on_start():
         })
 
 app.include_router(api)
+app.include_router(ai_tutor.router, prefix="/api")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -939,4 +941,3 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-app.include_router(ai_tutor.router, prefix="/ai", tags=["AI Tutor"])
